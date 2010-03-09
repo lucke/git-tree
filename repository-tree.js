@@ -274,9 +274,12 @@ tree.prototype.saveForm = function() {
 
 tree.prototype.save = function() {
 
-	this.saved_repository.set(this.repository);
+
+	this.saved_repository.set(this.repository+";"+this.github);
 	this.saved_url.set(this.url);
 	this.saved_tree.set(this.tree);
+
+		// Save github status
 	
 }
 
@@ -284,12 +287,26 @@ tree.prototype.restore = function() {
 
 	if(this.saved_repository.get()!="") {
 
-		this.repository = this.saved_repository.get();
-		this.url = this.saved_url.get();
+		var data = this.saved_repository.get().split(';');
+
+		if (data.length == 3)
+		{
+			this.repository = data[0]+";"+data[1];
+			this.github = true;
+		}
+		else
+		{
+			this.repository = data[0];
+			this.github = false;
+		}
+
 		this.tree = this.saved_tree.get();
+		this.url = this.saved_url.get();
 		this.is_configured = true;
 
 	}
+
+		// restore github status
 
 }
 
@@ -297,7 +314,11 @@ tree.prototype.getTree = function() {
 
 	if (this.github) {
 
-		this.sendGet(this.url+"?github=1&repository="+this.repository+"&op=4&tree="+this.tree, this.displayTree, this.displayError, this.displayException);
+		var user = this.repository.split(';')[0];
+		var repo = this.repository.split(';')[1];
+
+		this.sendGet(this.url+"?github=1&repository="+repo+"&user="+user+"&op=4&tree="+this.tree, this.displayTree, this.displayError, this.displayException);
+
 
 	}
 	else {
@@ -306,9 +327,12 @@ tree.prototype.getTree = function() {
 
 	}
 
+
 }
 
 tree.prototype.displayTree = function(resp) {
+
+	this.save();
 
 	var resp_json = eval('(' + resp.responseText + ')');
 
@@ -333,6 +357,9 @@ tree.prototype.build_tree = function(resp_json, local_pid) {
         for (i=1;i<=n_nodos;i++)
         {
                 nodo = "node" + i;
+
+		// Aquí hay que usar RESOURCES URL!
+
 
 		if (resp_json[nodo].type=="tree") {
 			this.showed_tree.add(this.ident, local_pid, resp_json[nodo].name, resp_json[nodo].id, null ,null,'http://localhost/gadgets/repository-tree/img/folder.gif','http://localhost/gadgets/repository-tree/img/folderopen.gif', false, true);
@@ -370,13 +397,24 @@ tree.prototype.setURL = function(msg) {
 
 tree.prototype.setRepository = function(msg) {
 
-	tree.repository = msg;
+	var data = msg.split(';');
+
+	if (data.length == 3)
+	{
+		tree.repository = data[0]+";"+data[1];
+		tree.github = true;
+	}
+	else
+	{
+		tree.repository = data[0];
+		tree.github = false;
+	}
+
 }
 
 tree.prototype.setTree = function(msg) {
 
 	tree.tree = msg;
-	tree.save();
 	tree.reset_tree();
 
 	tree.getTree();
@@ -390,7 +428,12 @@ tree.prototype.ExpandTree = function(tree_id, pid_local) {
 	this.ChangeDir=true;
 
 	if (this.github) {
-		this.sendGet(this.url+"?github=1&repository="+this.repository+"&op=4&tree="+tree_id, this.displayTree, this.displayError, this.displayException);
+
+		var user = this.repository.split(';')[0];
+		var repo = this.repository.split(';')[1];
+
+		this.sendGet(this.url+"?github=1&repository="+repo+"&user="+user+"&op=4&tree="+tree_id, this.displayTree, this.displayError, this.displayException);
+
 	}
 	else {
 
@@ -404,7 +447,6 @@ tree.prototype.Send_file = function(blob_id, filename) {
 	this.eventURL.set(this.saved_url.get());
 	var blob_name = blob_id + ";" + filename;
 	this.eventFile.set(blob_name);
-
 
 }
 
